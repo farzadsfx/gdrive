@@ -1,0 +1,29 @@
+name: Upload to Google Drive
+
+on: [push]
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone with secret
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONF_B64 }}" | base64 -d > ~/.config/rclone/rclone.conf
+
+      - name: Download and upload each file to Google Drive
+        run: |
+          while IFS= read -r url; do
+            filename=$(basename "$url")
+            echo "⬇️ Downloading: $url"
+            curl -L "$url" -o "$filename"
+            echo "📤 Uploading $filename to gdrive:/"
+            rclone copy "$filename" gdrive:/ --progress
+          done < files.txt
